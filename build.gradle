@@ -1,0 +1,109 @@
+buildscript {
+    ext {
+        springBootVersion = '1.2.5.RELEASE'
+    }
+    repositories {
+        jcenter()
+        mavenCentral()
+        mavenLocal()
+
+    }
+    dependencies {
+    	classpath('org.asciidoctor:asciidoctor-gradle-plugin:1.5.2')
+        classpath('org.asciidoctor:asciidoctorj-pdf:1.5.0-alpha.8')        
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}") 
+        classpath("io.spring.gradle:dependency-management-plugin:0.5.2.RELEASE")
+        classpath('io.github.robwin:swagger2markup-gradle-plugin:0.7.0')
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'spring-boot' 
+apply plugin: 'io.spring.dependency-management' 
+apply plugin: 'org.asciidoctor.convert'
+apply plugin: 'io.github.robwin.swagger2markup'
+
+jar {
+    baseName = 'demo-rest-mvc-swagger'
+    version = '0.0.1-SNAPSHOT'
+}
+
+version = '0.7.0'
+group = 'io.github.robwin'
+
+tasks.withType(JavaCompile) {
+    sourceCompatibility = "1.7"
+    targetCompatibility = "1.7"
+    options.deprecation = true
+    options.encoding = 'UTF-8'
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven { url 'https://repo.spring.io/snapshot' }
+    maven { url 'http://oss.jfrog.org/artifactory/oss-snapshot-local/' }    
+    mavenLocal()
+}
+
+
+dependencies {
+	compile("org.springframework.boot:spring-boot-starter-web")
+	compile('io.springfox:springfox-swagger2:2.0.3')
+    compile("org.springframework.boot:spring-boot-starter-actuator")
+    compile("org.springframework.boot:spring-boot-starter-data-jpa")    
+    runtime("com.h2database:h2")
+    testCompile("org.springframework.boot:spring-boot-starter-test") 
+    testCompile('io.springfox:springfox-staticdocs:2.0.3')
+    testCompile('junit:junit')
+    testCompile('org.springframework.restdocs:spring-restdocs:1.0.0.M1')
+    testCompile('com.jayway.restassured:spring-mock-mvc:2.4.0')
+    testCompile('com.fasterxml.jackson.module:jackson-module-jsonSchema:2.4.0')
+    testCompile('io.github.robwin:assertj-swagger:0.1.1')
+}
+
+ext {
+    generatedDocumentation = file('src/docs/asciidoc/generated')
+}
+
+test {
+    outputs.dir generatedDocumentation
+}
+
+asciidoctor {
+    dependsOn test
+    backends = ['html5', 'pdf']
+    attributes = [
+            doctype: 'book',
+            toc: 'left',
+            toclevels: '2',
+            numbered: '',
+            sectlinks: '',
+            sectanchors: '',
+            generated: generatedDocumentation
+    ]
+}
+
+jar {
+    dependsOn asciidoctor
+    from ("${asciidoctor.outputDir}/html5/generated") {
+        into 'static/docs'
+    }
+    from ("${asciidoctor.outputDir}/pdf/generated") {
+        into 'static/docs'
+    }
+}
+
+eclipse {
+    classpath {
+         containers.remove('org.eclipse.jdt.launching.JRE_CONTAINER')
+         containers 'org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8'
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.4'
+}
